@@ -126,3 +126,36 @@ async def verify(ctx):
     ))
 
 bot.run(os.getenv("TOKEN"))
+# =====================
+# ORDER TICKET SYSTEM
+# =====================
+
+@bot.command()
+async def order(ctx):
+    guild = ctx.guild
+    user = ctx.author
+
+    existing = discord.utils.get(guild.channels, name=f"order-{user.name}")
+    if existing:
+        await ctx.send("You already have an open order ticket.")
+        return
+
+    overwrites = {
+        guild.default_role: discord.PermissionOverwrite(read_messages=False),
+        user: discord.PermissionOverwrite(read_messages=True, send_messages=True),
+        guild.me: discord.PermissionOverwrite(read_messages=True)
+    }
+
+    channel = await guild.create_text_channel(
+        f"order-{user.name}",
+        overwrites=overwrites
+    )
+
+    embed = discord.Embed(
+        title="🛒 Order Ticket",
+        description=f"{user.mention} please describe what you would like to order.\nA staff member will assist you shortly.",
+        color=0x00BFFF
+    )
+
+    await channel.send(embed=embed)
+    await ctx.send("Your order ticket has been created.", delete_after=5)
