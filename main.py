@@ -125,7 +125,7 @@ async def verify(ctx):
         0x00FF00
     ))
 
-bot.run(os.getenv("TOKEN"))
+
 # =====================
 # ORDER TICKET SYSTEM
 # =====================
@@ -204,3 +204,11 @@ async def cmds(ctx):
     embed.set_footer(text="Your Server Utility Bot")
 
     await ctx.send(embed=embed)
+# =====================
+# PING COMMAND
+# =====================
+
+@bot.command()
+async def ping(ctx):
+    await ctx.send("Bot is online 24/7 🚀")
+    bot.run(os.getenv("TOKEN"))
