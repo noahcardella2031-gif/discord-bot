@@ -159,3 +159,47 @@ async def order(ctx):
 
     await channel.send(embed=embed)
     await ctx.send("Your order ticket has been created.", delete_after=5)
+    # =====================
+# COMMAND LIST
+# =====================
+
+@bot.command()
+async def cmds(ctx):
+    embed = discord.Embed(
+        title="📜 Bot Command List",
+        description="Here are all available commands:",
+        color=0x5865F2
+    )
+
+    embed.add_field(
+        name="🎟 Tickets",
+        value="`!panel` – Open support panel\n"
+              "`!order` – Open order ticket\n"
+              "`!close` – Close current ticket",
+        inline=False
+    )
+
+    embed.add_field(
+        name="🛡 Moderation",
+        value="`!kick @user reason`\n"
+              "`!ban @user reason`\n"
+              "`!clear amount`",
+        inline=False
+    )
+
+    embed.add_field(
+        name="✅ Verification",
+        value="`!verify` – Get verified role",
+        inline=False
+    )
+
+    embed.add_field(
+        name="ℹ️ Utility",
+        value="`!ping` – Check if bot is online\n"
+              "`!cmds` – Show this command list",
+        inline=False
+    )
+
+    embed.set_footer(text="Your Server Utility Bot")
+
+    await ctx.send(embed=embed)
