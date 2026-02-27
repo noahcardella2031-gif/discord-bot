@@ -159,6 +159,7 @@ async def order(ctx):
 
     await channel.send(embed=embed)
     await ctx.send("Your order ticket has been created.", delete_after=5)
+    
     # =====================
 # COMMAND LIST
 # =====================
