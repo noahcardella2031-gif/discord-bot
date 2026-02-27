@@ -27,13 +27,12 @@ def save_data(data):
 # BOT SETUP
 # =====================
 intents = discord.Intents.default()
-intents.message_content = True
-intents.members = True
-
+intents.message_content = True  # Required for !cmds and !verify
+intents.members = True          # Required for giving roles
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
 async def log_event(guild, title, description, color=0x5865F2):
-    """Logs actions to a channel named '📂-logs'"""
+    """Logs actions to '📂-logs' channel"""
     log_channel = discord.utils.get(guild.text_channels, name="📂-logs")
     if log_channel:
         embed = discord.Embed(title=title, description=description, color=color)
@@ -47,7 +46,7 @@ class TicketView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="Open Ticket", style=discord.ButtonStyle.green, custom_id="persistent_ticket_v1")
+    @discord.ui.button(label="Open Ticket", style=discord.ButtonStyle.green, custom_id="persistent_ticket_v2")
     async def open_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
         guild = interaction.guild
         user = interaction.user
@@ -63,75 +62,32 @@ class TicketView(discord.ui.View):
         }
         
         channel = await guild.create_text_channel(channel_name, overwrites=overwrites)
-        
-        embed = discord.Embed(
-            title="🎟 Support Ticket", 
-            description=f"Welcome {user.mention}. Staff will assist you shortly.\nUse `!close` to end this ticket.", 
-            color=0x2ECC71
-        )
+        embed = discord.Embed(title="🎟 Support Ticket", description=f"Welcome {user.mention}. Staff will assist you shortly.", color=0x2ECC71)
         await channel.send(embed=embed)
         await interaction.response.send_message(f"Ticket created: {channel.mention}", ephemeral=True)
         await log_event(guild, "Ticket Opened", f"👤 **User:** {user.mention}\n📂 **Channel:** {channel.mention}", 0x2ECC71)
 
 # =====================
-# EVENTS
+# EVENTS & COMMANDS
 # =====================
 @bot.event
 async def on_ready():
     bot.add_view(TicketView())
-    print(f"✅ Logged in as {bot.user}")
-
-# =====================
-# MODERATION & STAFF
-# =====================
-@bot.command()
-@commands.has_permissions(manage_messages=True)
-async def warn(ctx, member: discord.Member, *, reason="No reason provided"):
-    data = load_data()
-    uid = str(member.id)
-    if uid not in data["warnings"]: data["warnings"][uid] = []
-    
-    data["warnings"][uid].append({"reason": reason, "mod": ctx.author.name})
-    save_data(data)
-    
-    count = len(data["warnings"][uid])
-    await ctx.send(f"⚠️ {member.mention} has been warned ({count}/3).")
-    
-    log_msg = f"👤 **User:** {member.mention}\n🛡️ **Mod:** {ctx.author.mention}\n📝 **Reason:** {reason}"
-    if count >= 3: log_msg += "\n🚨 **USER HAS REACHED 3 WARNINGS!**"
-    
-    await log_event(ctx.guild, "User Warning", log_msg, 0xE74C3C)
+    print(f"✅ {bot.user} is online and connected!")
 
 @bot.command()
-@commands.has_permissions(moderate_members=True)
-async def timeout(ctx, member: discord.Member, minutes: int, *, reason="No reason provided"):
-    duration = timedelta(minutes=minutes)
-    await member.timeout(duration, reason=reason)
-    await ctx.send(f"🔇 {member.name} timed out for {minutes}m.")
-    await log_event(ctx.guild, "User Timeout", f"👤 **User:** {member.mention}\n⏰ **Length:** {minutes}m", 0xF1C40F)
-
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def promote(ctx, member: discord.Member):
-    roles_list = ["Helper", "Moderator", "Admin"]
-    current_index = -1
-    for i, r_name in enumerate(roles_list):
-        if discord.utils.get(member.roles, name=r_name): current_index = i
-            
-    if current_index + 1 >= len(roles_list):
-        return await ctx.send("User is already at the highest staff rank!")
-
-    new_role_name = roles_list[current_index + 1]
-    role = discord.utils.get(ctx.guild.roles, name=new_role_name)
+async def verify(ctx):
+    role = discord.utils.get(ctx.guild.roles, name="Verified")
+    if role is None:
+        return await ctx.send("❌ Error: Create a role named `Verified` first.")
     
-    if role:
-        await member.add_roles(role)
-        await ctx.send(f"🎊 {member.mention} promoted to **{new_role_name}**!")
-        await log_event(ctx.guild, "Staff Promotion", f"👤 **Staff:** {member.mention}\n📈 **Rank:** {new_role_name}", 0x9B59B6)
+    try:
+        await ctx.author.add_roles(role)
+        await ctx.send(f"✅ {ctx.author.mention}, you are now verified!", delete_after=5)
+        await log_event(ctx.guild, "User Verified", f"👤 {ctx.author.mention}", 0x2ECC71)
+    except discord.Forbidden:
+        await ctx.send("❌ Error: Move my role to the top of the role list!")
 
-# =====================
-# UTILITY
-# =====================
 @bot.command()
 async def cmds(ctx):
     embed = discord.Embed(title="📜 Command Menu", color=0x5865F2)
@@ -141,28 +97,27 @@ async def cmds(ctx):
     await ctx.send(embed=embed)
 
 @bot.command()
+@commands.has_permissions(manage_messages=True)
+async def clear(ctx, amount: int):
+    await ctx.channel.purge(limit=amount + 1)
+
+@bot.command()
 async def close(ctx):
-    if "ticket-" in ctx.channel.name or "order-" in ctx.channel.name:
-        await log_event(ctx.guild, "Channel Closed", f"📂 **Name:** {ctx.channel.name}\n🛡️ **By:** {ctx.author.mention}", 0x95A5A6)
-        await ctx.send("Deleting channel in 5s...")
+    if "ticket-" in ctx.channel.name:
+        await ctx.send("Closing in 5 seconds...")
         await asyncio.sleep(5)
         await ctx.channel.delete()
 
 @bot.command()
 async def panel(ctx):
-    embed = discord.Embed(title="Support Panel", description="Click the button to open a ticket.", color=0x5865F2)
+    embed = discord.Embed(title="Support Panel", description="Click below to open a ticket.", color=0x5865F2)
     await ctx.send(embed=embed, view=TicketView())
-
-@bot.command()
-async def ping(ctx):
-    await ctx.send(f"🏓 Pong! {round(bot.latency * 1000)}ms")
 
 # =====================
 # RUN THE BOT
 # =====================
-token = os.getenv("DISCORD_TOKEN") # Railway looks for this variable name
-
+token = os.getenv("DISCORD_TOKEN")
 if token:
     bot.run(token)
 else:
-    print("❌ CRITICAL ERROR: DISCORD_TOKEN variable not found in Railway Settings.")
+    print("❌ Error: Missing DISCORD_TOKEN in Railway Variables.")
