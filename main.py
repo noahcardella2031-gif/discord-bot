@@ -198,4 +198,4 @@ async def ping(ctx):
 # START BOT
 # =====================
 # Replace 'YOUR_TOKEN' with your actual bot token
-bot.run(MTQ3Njc2MzE0MDU1NjMyOTA5NQ.GCHoNl.WrbN6-MtVDZimnY8jbd4wnsuM1eAZi6kAbNr7k)
+bot.run("MTQ3Njc2MzE0MDU1NjMyOTA5NQ.GCHoNl.WrbN6-MtVDZimnY8jbd4wnsuM1eAZi6kAbNr7k")
